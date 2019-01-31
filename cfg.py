@@ -65,7 +65,7 @@ class CfgRepo(Repo):
                 self.prepare_install_treestage_1(e)
 
     def prepare_install_tree(self, tree):
-        self.prepare_install_tree_stage_1(self, tree)
+        self.prepare_install_tree_stage_1(tree)
         if self.dst_paths_to_hash:
             dst_hashes = git_hashes(self.dst_paths_to_hash)
             i = 0

@@ -62,7 +62,7 @@ class CfgRepo(Repo):
                     difference = FILE_MISSING
                 self.elts.append([e, dst_path, difference])
             if e.type == "tree":
-                self.prepare_install_treestage_1(e)
+                self.prepare_install_tree_stage_1(e)
 
     def prepare_install_tree(self, tree):
         self.prepare_install_tree_stage_1(tree)

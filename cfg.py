@@ -45,7 +45,7 @@ class CfgRepo(Repo):
     def __init__(self, *args, **kwargs):
         super(CfgRepo, self).__init__(*args, **kwargs)
 
-    def prepare_install_tree(self, tree):
+    def prepare_install_tree_stage_1(self, tree):
         for e in tree:
             if e.path.startswith(SRC_PATH):
                 path = e.path[L_SRC_PATH:]
@@ -62,7 +62,10 @@ class CfgRepo(Repo):
                     difference = FILE_MISSING
                 self.elts.append([e, dst_path, difference])
             if e.type == "tree":
-                self.prepare_install_tree(e)
+                self.prepare_install_treestage_1(e)
+
+    def prepare_install_tree(self, tree):
+        self.prepare_install_tree_stage_1(self, tree)
         if self.dst_paths_to_hash:
             dst_hashes = git_hashes(self.dst_paths_to_hash)
             i = 0

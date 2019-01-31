@@ -71,6 +71,7 @@ class CfgRepo(Repo):
                     if dst_hashes[i] == elt[0].hexsha:
                         elt[2] = FILE_IDENTICAL
                     else:
+                        print(elt.path, dst_hashes[i], elt[0].hexsha)
                         elt[2] = FILE_HASH_DIFFERS
                     i += 1
 

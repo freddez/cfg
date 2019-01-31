@@ -27,17 +27,11 @@ MESSAGE = {
 SRC_PATH = "src/"
 L_SRC_PATH = len(SRC_PATH)
 
-parser = argparse.ArgumentParser()
-parser.add_argument("command", help="cfg command")
-args = parser.parse_args()
-assert args.command == "install"
-
 sys.path.append(".")
 params = importlib.import_module("cfg_params")
 
 
 def git_hashes(str_paths):
-    print(str_paths)
     proc = run(
         ["git", "hash-object", "--stdin-paths"],
         stdout=PIPE,
@@ -53,7 +47,6 @@ class CfgRepo(Repo):
 
     def prepare_install_tree(self, tree):
         for e in tree:
-            print(e.path)
             if e.path.startswith(SRC_PATH):
                 path = e.path[L_SRC_PATH:]
                 dst_path = os.path.join(params.TARGET, path)
@@ -75,16 +68,13 @@ class CfgRepo(Repo):
             i = 0
             for elt in self.elts:
                 if elt[2] == FILE_SIZE_IDENTICAL:
-                    import ipdb
-
-                    ipdb.set_trace()
                     if dst_hashes[i] == elt[0].hexsha:
                         elt[2] = FILE_IDENTICAL
                     else:
                         elt[2] = FILE_HASH_DIFFERS
                     i += 1
 
-    def install(self):
+    def install(self, test=False):
         colorama.init()
         if self.is_dirty():
             print(colored("ERROR", "red"), " : uncommited files exists")
@@ -92,11 +82,12 @@ class CfgRepo(Repo):
         self.elts = []
         self.dst_paths_to_hash = ""
         self.prepare_install_tree(self.active_branch.commit.tree)
-        print(self.elts)
         for e, dst_path, difference in self.elts:
             if difference == FILE_IDENTICAL:
                 continue
             print(colored(MESSAGE[difference], "green"), dst_path)
+            if test:
+                continue
             if difference != FILE_MISSING:
                 shutil.move(dst_path, dst_path + ".old")
             if e.type == "tree":
@@ -105,7 +96,11 @@ class CfgRepo(Repo):
                 shutil.copy2(e.path, dst_path)
         print(colored("TODO : check permissions", "red"))
 
-
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("command", help="cfg command")
+    args = parser.parse_args()
     repo = CfgRepo()
-    repo.install()
+    if args.command in ("install", "test"):
+        repo.install(test=args.command == "test")

@@ -126,7 +126,9 @@ class CfgRepo(Repo):
         # shutil.copy2(path, src_path)
         mkdir_copy(self.target, os.path.join(self.working_dir, SRC_PATH), sub_path)
         self.index.add([src_path])  # git add
-        self.index.commit("[cfg] : +%s" % os.path.basename(src_path))  # git commit
+        basename = os.path.basename(src_path)
+        self.index.commit("[cfg] : +%s" % basename)  # git commit
+        print("%s added to the repository" % basename)
 
 
 if __name__ == "__main__":

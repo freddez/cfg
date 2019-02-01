@@ -9,7 +9,6 @@ from subprocess import run, PIPE
 import colorama
 from termcolor import colored
 
-
 FILE_IDENTICAL = 0
 FILE_MISSING = 1
 FILE_SIZE_DIFFERS = 2
@@ -39,6 +38,16 @@ def git_hashes(str_paths):
     )
     assert proc.returncode == 0
     return proc.stdout.decode().split("\n")[:-1]
+
+
+def mkdir_copy(src_path, dst_path, sub_path):
+    path = ""
+    for dir in os.path.dirname(sub_path).split("/"):
+        path += "/" + dir
+        if not os.path.exists(dst_path + path):
+            os.mkdir(dst_path + path)
+            shutil.copystat(src_path + path, dst_path + path)
+    shutil.copy2(os.path.join(src_path, sub_path), os.path.join(dst_path, sub_path))
 
 
 class CfgRepo(Repo):
@@ -101,7 +110,7 @@ class CfgRepo(Repo):
                 shutil.copy2(e.path, dst_path)
         print(colored("TODO : check permissions", "red"))
 
-    def import_command(self, path):
+    def add_command(self, path):
         path = os.path.abspath(path)
         if not path.startswith(self.target):
             print(colored("ERROR", "red"), " : path outside %s dir" % self.target)
@@ -114,7 +123,8 @@ class CfgRepo(Repo):
         else:
             sub_path = path[len(self.target) + 1 :]
         src_path = os.path.join(self.working_dir, SRC_PATH, sub_path)
-        shutil.copy2(path, src_path)
+        # shutil.copy2(path, src_path)
+        mkdir_copy(self.target, os.path.join(self.working_dir, SRC_PATH), sub_path)
         self.index.add([src_path])  # git add
         self.index.commit("[cfg] : +%s" % os.path.basename(src_path))  # git commit
 
@@ -135,7 +145,7 @@ if __name__ == "__main__":
 
     #  Add command
     add_parser = subparsers.add_parser(
-        "import", help="Import file in repository and commit it"
+        "add", help="Import file in repository and commit it"
     )
     add_parser.add_argument("path", action="store", help="Full path of file to add")
 
@@ -143,5 +153,5 @@ if __name__ == "__main__":
     repo = CfgRepo()
     if args.command == "install":
         repo.install_command(test=args.test)
-    elif args.command == "import":
-        repo.import_command(args.path)
+    elif args.command == "add":
+        repo.add_command(args.path)

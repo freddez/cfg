@@ -109,9 +109,11 @@ class CfgRepo(Repo):
         if not os.path.exists(path):
             print(colored("ERROR", "red"), " : path does not exists")
             return
-        src_path = os.path.join(
-            self.working_dir, SRC_PATH, path[len(self.target) + 1 :]
-        )
+        if self.target == "/":
+            sub_path = path[len(self.target) :]
+        else:
+            sub_path = path[len(self.target) + 1 :]
+        src_path = os.path.join(self.working_dir, SRC_PATH, sub_path)
         shutil.copy2(path, src_path)
         self.index.add([src_path])  # git add
         self.index.commit("[cfg] : +%s" % os.path.basename(src_path))  # git commit

@@ -44,12 +44,13 @@ def git_hashes(str_paths):
 class CfgRepo(Repo):
     def __init__(self, *args, **kwargs):
         super(CfgRepo, self).__init__(*args, **kwargs)
+        self.target = os.path.abspath(params.TARGET)
 
     def prepare_install_tree_stage_1(self, tree):
         for e in tree:
             if e.path.startswith(SRC_PATH):
                 path = e.path[L_SRC_PATH:]
-                dst_path = os.path.join(params.TARGET, path)
+                dst_path = os.path.join(self.target, path)
                 if os.path.exists(dst_path):
                     if e.type == "tree":
                         difference = FILE_IDENTICAL
@@ -78,7 +79,7 @@ class CfgRepo(Repo):
                         elt[2] = FILE_HASH_DIFFERS
                     i += 1
 
-    def install(self, test=False):
+    def install_command(self, test=False):
         colorama.init()
         if self.is_dirty():
             print(colored("ERROR", "red"), " : uncommited files exists")
@@ -100,11 +101,45 @@ class CfgRepo(Repo):
                 shutil.copy2(e.path, dst_path)
         print(colored("TODO : check permissions", "red"))
 
-if __name__ == "__main__":
+    def import_command(self, path):
+        path = os.path.abspath(path)
+        if not path.startswith(self.target):
+            print(colored("ERROR", "red"), " : path outside %s dir" % self.target)
+            return
+        if not os.path.exists(path):
+            print(colored("ERROR", "red"), " : path does not exists")
+            return
+        src_path = os.path.join(
+            self.working_dir, SRC_PATH, path[len(self.target) + 1 :]
+        )
+        shutil.copy2(path, src_path)
+        self.index.add([src_path])  # git add
+        self.index.commit("[cfg] : +%s" % os.path.basename(src_path))  # git commit
 
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", help="cfg command")
+
+    subparsers = parser.add_subparsers(help="commands", dest="command")
+
+    # Install command
+    install_parser = subparsers.add_parser("install", help="Install src content")
+    install_parser.add_argument(
+        "--test",
+        default=False,
+        action="store_true",
+        help="perform a trial install to show what's changed",
+    )
+
+    #  Add command
+    add_parser = subparsers.add_parser(
+        "import", help="Import file in repository and commit it"
+    )
+    add_parser.add_argument("path", action="store", help="Full path of file to add")
+
     args = parser.parse_args()
     repo = CfgRepo()
-    if args.command in ("install", "test"):
-        repo.install(test=args.command == "test")
+    if args.command == "install":
+        repo.install_command(test=args.test)
+    elif args.command == "import":
+        repo.import_command(args.path)

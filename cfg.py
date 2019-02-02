@@ -14,13 +14,15 @@ FILE_MISSING = 1
 FILE_SIZE_DIFFERS = 2
 FILE_SIZE_IDENTICAL = 3
 FILE_HASH_DIFFERS = 4
+FILE_ATTR_DIFFERS = 5
 
 MESSAGE = {
     FILE_IDENTICAL: "files identical",
     FILE_MISSING: "file missing",
-    FILE_SIZE_DIFFERS: "files sizes differs",
-    FILE_SIZE_IDENTICAL: "files sizes identical",
-    FILE_HASH_DIFFERS: "files hashes differs",
+    FILE_SIZE_DIFFERS: "file size differs",
+    FILE_SIZE_IDENTICAL: "file size identical",
+    FILE_HASH_DIFFERS: "file hash differs",
+    FILE_ATTR_DIFFERS: "file attributes differs",
 }
 
 SRC_PATH = "src/"
@@ -38,6 +40,24 @@ def git_hashes(str_paths):
     )
     assert proc.returncode == 0
     return proc.stdout.decode().split("\n")[:-1]
+
+
+def colordiff(file1, file2):
+    run(["colordiff", file1, file2])
+
+
+def dir_diff(src_path, dst_path):
+    "Check differences between two paths. Used to check permissions changes"
+    proc = run(["rsync", "-nrpgovi", src_path + "/", dst_path + "/"], stdout=PIPE)
+    assert proc.returncode == 0
+    dir_diff = {}
+    for line in proc.stdout.decode().split("\n")[1:-4]:
+        change = line[:11]
+        path = line[12:]
+        if path[-1] == "/":
+            path = path[:-1]
+        dir_diff[path] = change
+    return dir_diff
 
 
 def mkdir_copy(src_path, dst_path, sub_path):
@@ -89,6 +109,10 @@ class CfgRepo(Repo):
                     i += 1
 
     def install_command(self, test=False):
+        if test:
+            print("checking content...")
+        else:
+            print("installing...")
         colorama.init()
         if self.is_dirty():
             print(colored("ERROR", "red"), " : uncommited files exists")
@@ -99,16 +123,26 @@ class CfgRepo(Repo):
         for e, dst_path, difference in self.elts:
             if difference == FILE_IDENTICAL:
                 continue
-            print(colored(MESSAGE[difference], "green"), dst_path)
+            print("%s : %s" % (dst_path, colored(MESSAGE[difference], "green")))
+            if difference != FILE_MISSING:
+                colordiff(dst_path, e.path)
             if test:
                 continue
-            if difference != FILE_MISSING:
+            if difference != FILE_MISSING and e.type != "tree":
                 shutil.move(dst_path, dst_path + ".old")
             if e.type == "tree":
                 os.makedirs(dst_path)
             else:
                 shutil.copy2(e.path, dst_path)
-        print(colored("TODO : check permissions", "red"))
+        print("checking attributes changes :")
+        dird = dir_diff(SRC_PATH, self.target)
+        for e, dst_path, difference in self.elts:
+            path = e.path[L_SRC_PATH:]
+            change = dird.get(path)
+            if change:
+                print("%s %s" % (change, path))
+                if not test:
+                    shutil.copystat(e.path, dst_path)
 
     def add_command(self, path):
         path = os.path.abspath(path)
@@ -123,7 +157,6 @@ class CfgRepo(Repo):
         else:
             sub_path = path[len(self.target) + 1 :]
         src_path = os.path.join(self.working_dir, SRC_PATH, sub_path)
-        # shutil.copy2(path, src_path)
         mkdir_copy(self.target, os.path.join(self.working_dir, SRC_PATH), sub_path)
         self.index.add([src_path])  # git add
         basename = os.path.basename(src_path)

@@ -70,27 +70,42 @@ def mkdir_copy(src_path, dst_path, sub_path):
     shutil.copy2(os.path.join(src_path, sub_path), os.path.join(dst_path, sub_path))
 
 
+class CfgElement(object):
+    def __init__(self, elt):
+        self.type = elt.type
+        self.size = elt.size
+        self.hexsha = elt.hexsha
+        self.path = elt.path[L_SRC_PATH:]
+        self.abspath = elt.abspath
+        self.dst_path = os.path.join(params.target, self.path)
+
+    @property
+    def difference(self):
+        if not hasattr(self, "_difference"):
+            if os.path.exists(self.dst_path):
+                if self.type == "tree":
+                    self._difference = FILE_IDENTICAL
+                elif self.size != os.path.getsize(self.dst_path):
+                    self._difference = FILE_SIZE_DIFFERS
+                else:
+                    self._difference = FILE_SIZE_IDENTICAL
+            else:
+                self._difference = FILE_MISSING
+        return self._difference
+
+
 class CfgRepo(Repo):
     def __init__(self, *args, **kwargs):
         super(CfgRepo, self).__init__(*args, **kwargs)
-        self.target = os.path.abspath(params.TARGET)
+        params.target = os.path.abspath(params.TARGET)
 
     def prepare_install_tree_stage_1(self, tree):
         for e in tree:
             if e.path.startswith(SRC_PATH):
-                path = e.path[L_SRC_PATH:]
-                dst_path = os.path.join(self.target, path)
-                if os.path.exists(dst_path):
-                    if e.type == "tree":
-                        difference = FILE_IDENTICAL
-                    elif e.size != os.path.getsize(dst_path):
-                        difference = FILE_SIZE_DIFFERS
-                    else:
-                        difference = FILE_SIZE_IDENTICAL
-                        self.dst_paths_to_hash += dst_path + "\n"
-                else:
-                    difference = FILE_MISSING
-                self.elts.append([e, dst_path, difference])
+                cfg_elt = CfgElement(e)
+                if cfg_elt.difference == FILE_SIZE_IDENTICAL:
+                    self.dst_paths_to_hash += cfg_elt.dst_path + "\n"
+                self.elts.append(cfg_elt)
             if e.type == "tree":
                 self.prepare_install_tree_stage_1(e)
 
@@ -100,12 +115,11 @@ class CfgRepo(Repo):
             dst_hashes = git_hashes(self.dst_paths_to_hash)
             i = 0
             for elt in self.elts:
-                if elt[2] == FILE_SIZE_IDENTICAL:
-                    if dst_hashes[i] == elt[0].hexsha:
-                        elt[2] = FILE_IDENTICAL
+                if elt.difference == FILE_SIZE_IDENTICAL:
+                    if dst_hashes[i] == elt.hexsha:
+                        elt._difference = FILE_IDENTICAL
                     else:
-                        print(elt[0].path, dst_hashes[i], elt[0].hexsha)
-                        elt[2] = FILE_HASH_DIFFERS
+                        elt._difference = FILE_HASH_DIFFERS
                     i += 1
 
     def install_command(self, test=False):
@@ -120,44 +134,43 @@ class CfgRepo(Repo):
         self.elts = []
         self.dst_paths_to_hash = ""
         self.prepare_install_tree(self.active_branch.commit.tree)
-        for e, dst_path, difference in self.elts:
-            if difference == FILE_IDENTICAL:
+        for e in self.elts:
+            if e.difference == FILE_IDENTICAL:
                 continue
-            print("%s : %s" % (dst_path, colored(MESSAGE[difference], "green")))
-            if difference != FILE_MISSING:
-                colordiff(dst_path, e.path)
+            print("%s : %s" % (e.dst_path, colored(MESSAGE[e.difference], "green")))
+            if e.difference != FILE_MISSING:
+                colordiff(e.dst_path, e.abspath)
             if test:
                 continue
-            if difference != FILE_MISSING and e.type != "tree":
-                shutil.move(dst_path, dst_path + ".old")
+            if e.difference != FILE_MISSING and e.type != "tree":
+                shutil.move(e.dst_path, e.dst_path + ".old")
             if e.type == "tree":
-                os.makedirs(dst_path)
+                os.makedirs(e.dst_path)
             else:
-                shutil.copy2(e.path, dst_path)
+                shutil.copy2(e.abspath, e.dst_path)
         print("checking attributes changes :")
-        dird = dir_diff(SRC_PATH, self.target)
-        for e, dst_path, difference in self.elts:
-            path = e.path[L_SRC_PATH:]
-            change = dird.get(path)
+        dird = dir_diff(SRC_PATH, params.target)
+        for e in self.elts:
+            change = dird.get(e.path)
             if change:
-                print("%s %s" % (change, path))
+                print("%s %s" % (change, e.path))
                 if not test:
-                    shutil.copystat(e.path, dst_path)
+                    shutil.copystat(e.abspath, e.dst_path)
 
     def add_command(self, path):
         path = os.path.abspath(path)
-        if not path.startswith(self.target):
-            print(colored("ERROR", "red"), " : path outside %s dir" % self.target)
+        if not path.startswith(params.target):
+            print(colored("ERROR", "red"), " : path outside %s dir" % params.target)
             return
         if not os.path.exists(path):
             print(colored("ERROR", "red"), " : path does not exists")
             return
-        if self.target == "/":
-            sub_path = path[len(self.target) :]
+        if params.target == "/":
+            sub_path = path[len(params.target) :]
         else:
-            sub_path = path[len(self.target) + 1 :]
+            sub_path = path[len(params.target) + 1 :]
         src_path = os.path.join(self.working_dir, SRC_PATH, sub_path)
-        mkdir_copy(self.target, os.path.join(self.working_dir, SRC_PATH), sub_path)
+        mkdir_copy(params.target, os.path.join(self.working_dir, SRC_PATH), sub_path)
         self.index.add([src_path])  # git add
         basename = os.path.basename(src_path)
         self.index.commit("[cfg] : +%s" % basename)  # git commit

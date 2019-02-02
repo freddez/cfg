@@ -4,6 +4,7 @@ from git import Repo
 import importlib
 import sys
 import os
+import stat
 import shutil
 from subprocess import run, PIPE
 import colorama
@@ -31,6 +32,8 @@ L_SRC_PATH = len(SRC_PATH)
 sys.path.append(".")
 params = importlib.import_module("cfg_params")
 
+def human_stat(path):
+    return stat.filemode(os.stat(path).st_mode)
 
 def git_hashes(str_paths):
     proc = run(
@@ -153,7 +156,16 @@ class CfgRepo(Repo):
         for e in self.elts:
             change = dird.get(e.path)
             if change:
-                print("%s %s" % (change, e.path))
+                dst_perms = human_stat(e.dst_path)
+                src_perms = human_stat(e.abspath)
+                if src_perms != dst_perms:
+                    print("%s %s %s" % (
+                        colored(src_perms, "green"),
+                        colored(dst_perms, "red"),
+                        e.path
+                    ))
+                else:
+                    print(e.path)
                 if not test:
                     shutil.copystat(e.abspath, e.dst_path)
 

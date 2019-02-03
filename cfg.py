@@ -17,7 +17,10 @@ def human_stat(path):
     return stat.filemode(os.stat(path).st_mode)
 
 
-def error(error_type, message):
+def error(error_type, message=None):
+    if message is None:
+        message = error_type
+        error_type = "ERROR"
     print("%s : %s" % (colored(error_type, "red"), message))
     sys.exit(0)
 
@@ -194,8 +197,7 @@ class CfgRepo(Repo):
             print("installing...")
         colorama.init()
         if self.is_dirty():
-            print(colored("ERROR", "red"), " : uncommited files exists")
-            return
+            error("uncommited files exists")
         self.elts = []
         self.prepare_install_tree(self.active_branch.commit.tree)
         for e in self.elts:
@@ -238,8 +240,7 @@ class CfgRepo(Repo):
     def add_command(self, path):
         path = osp.abspath(path)
         if not path.startswith(params.target):
-            print(colored("ERROR", "red"), " : path outside %s dir" % params.target)
-            return
+            error("path outside %s dir" % params.target)
         if not osp.exists(path):
             print(colored("ERROR", "red"), " : path does not exists")
             return

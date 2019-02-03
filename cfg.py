@@ -61,6 +61,7 @@ L_SRC_PATH = len(SRC_PATH)
 
 sys.path.append(".")
 params = importlib.import_module("cfg_params")
+params_mtime = osp.getmtime(params.__file__)
 replacement_map = {
     "=cfg[%s]" % key: getattr(params, key) for key in dir(params) if key == key.upper()
 }
@@ -127,16 +128,23 @@ class CfgElement(object):
         self._difference = difference
 
     def process_cfg_file(self, basename):
-        content = open(self.abspath).read()
-        content = cfg_rgxp.sub(lambda match: replacement_map[match.group(0)], content)
         n = len(basename)
         new_basename = basename[4:]  # suppress ".cfg" prefix
-        self.path = self.path[:-n] + new_basename
-        old_abspath = self.abspath
-        self.abspath = self.abspath[:-n] + new_basename
-        file = open(self.abspath, "w")
-        file.write(content)
-        shutil.copystat(old_abspath, self.abspath)
+        new_path = self.path[:-n] + new_basename
+        new_abspath = self.abspath[:-n] + new_basename
+        if osp.exists(new_abspath) and (
+            params_mtime > osp.getmtime(new_abspath)
+            or osp.getmtime(self.abspath) > osp.getmtime(new_abspath)
+        ):
+            content = open(self.abspath).read()
+            content = cfg_rgxp.sub(
+                lambda match: replacement_map[match.group(0)], content
+            )
+            file = open(new_abspath, "w")
+            file.write(content)
+        shutil.copystat(self.abspath, new_abspath)
+        self.path = new_path
+        self.abspath = new_abspath
         self.hexsha = None
         self.set_difference = FILE_TO_HASH
 

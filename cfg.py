@@ -135,9 +135,14 @@ class CfgElement(object):
         new_basename = basename[4:]  # suppress ".cfg" prefix
         new_path = self.path[:-n] + new_basename
         new_abspath = self.abspath[:-n] + new_basename
-        if osp.exists(new_abspath) and (
-            params_mtime > osp.getmtime(new_abspath)
-            or osp.getmtime(self.abspath) > osp.getmtime(new_abspath)
+        new_abspath_exists = osp.exists(new_abspath)
+        if new_abspath_exists:
+            stat = os.stat(new_abspath)
+            self.size = stat.st_size
+        if (
+            not new_abspath_exists
+            or params_mtime > stat.st_mtime
+            or osp.getmtime(self.abspath) > stat.st_mtime
         ):
             content = open(self.abspath).read()
             content = cfg_rgxp.sub(lambda match: params_map[match.group(0)], content)
@@ -147,7 +152,7 @@ class CfgElement(object):
         self.path = new_path
         self.abspath = new_abspath
         self.hexsha = None
-        self.set_difference = FILE_TO_HASH
+        self.set_difference(FILE_TO_HASH)
 
 
 class CfgRepo(Repo):
@@ -212,7 +217,7 @@ class CfgRepo(Repo):
                 os.makedirs(e.dst_path)
             else:
                 shutil.copy2(e.abspath, e.dst_path)
-        print("checking attributes changes :")
+        print("checking attributes changes...")
         dird = dir_diff(SRC_PATH, params.target)
         for e in self.elts:
             if test and e.difference == FILE_MISSING:

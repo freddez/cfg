@@ -1,0 +1,44 @@
+from setuptools import setup, find_packages
+from os import path
+
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, "README.rst"), encoding="utf-8") as f:
+    long_description = f.read()
+
+setup(
+    name="cfg",
+    version="1.0.0",
+    description="git based config files manager and installer",
+    long_description=long_description,
+    long_description_content_type="text/x-rst",
+    url="https://github.com/freddez/cfg",  # Optional
+    author="Frédéric de ZORZI",
+    author_email="f@idez.net",
+    # Classifiers help users find your project by categorizing it.
+    #
+    # For a list of valid classifiers, see https://pypi.org/classifiers/
+    classifiers=[  # Optional
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: DevOps",
+        "Topic :: System Administration :: Build Tools",
+        "License :: OSI Approved :: GPL",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+    ],
+    keywords="system configuration files git deploy",
+    packages=find_packages(exclude=[]),
+    python_requires=">=3.4.*, <4",
+    install_requires=["gitpython", "colorama", "termcolor"],
+    entry_points={"console_scripts": ["cfg=cfg.cfg:main"]},
+    project_urls={  # Optional
+        "Bug Reports": "https://github.com/freddez/cfg/issues",
+        "Funding": "https://donate.pypi.org",
+        "Say Thanks!": "https://saythanks.io/to/freddez",
+        "Source": "https://github.com/freddez/cfg",
+    },
+)

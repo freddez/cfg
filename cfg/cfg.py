@@ -1,46 +1,22 @@
 #!/usr/bin/env python3
 import argparse
-from git import Repo
 import importlib
 import sys
-import os
-import os.path as osp
+import os, os.path as osp
 import re
-import stat
 import shutil
-from subprocess import run, PIPE
 import colorama
 from termcolor import colored
-
-
-def human_stat(path):
-    return stat.filemode(os.stat(path).st_mode)
-
-
-def error(error_type, message=None):
-    if message is None:
-        message = error_type
-        error_type = "ERROR"
-    print("%s : %s" % (colored(error_type, "red"), message))
-    sys.exit(0)
-
-
-def config_error(message):
-    error("CONFIG ERROR", message)
-
-
-def git_hashes(str_paths):
-    proc = run(
-        ["git", "hash-object", "--stdin-paths"],
-        stdout=PIPE,
-        input=bytes(str_paths, "utf-8"),
-    )
-    assert proc.returncode == 0
-    return proc.stdout.decode().split("\n")[:-1]
-
-
-def colordiff(file1, file2):
-    run(["colordiff", file1, file2])
+from git import Repo
+from .utils import (
+    human_stat,
+    error,
+    config_error,
+    git_hashes,
+    colordiff,
+    dir_diff,
+    mkdir_copy,
+)
 
 
 FILE_IDENTICAL = 0
@@ -51,19 +27,14 @@ FILE_HASH_DIFFERS = 4
 FILE_ATTR_DIFFERS = 5
 FILE_TO_HASH = 6
 
-MESSAGE = {
-    FILE_IDENTICAL: "files identical",
-    FILE_MISSING: "file missing",
-    FILE_SIZE_DIFFERS: "file size differs",
-    FILE_HASHES_TO_COMPARE: "file hashes to compare",
-    FILE_ATTR_DIFFERS: "file attributes differs",
-}
-
 SRC_PATH = "src/"
 L_SRC_PATH = len(SRC_PATH)
 
 sys.path.append(".")
-params = importlib.import_module("cfg_params")
+try:
+    params = importlib.import_module("cfg_params")
+except ImportError:
+    error("cfg_params.py file missing")
 params_mtime = osp.getmtime(params.__file__)
 params_map = {
     "=cfg[%s]" % key: getattr(params, key) for key in dir(params) if key == key.upper()
@@ -72,30 +43,6 @@ for key, value in params_map.items():
     if not isinstance(value, str):
         config_error("%s value should be a string" % key)
 cfg_rgxp = re.compile("|".join(map(re.escape, params_map.keys())))
-
-
-def dir_diff(src_path, dst_path):
-    "Check differences between two paths. Used to check permissions changes"
-    proc = run(["rsync", "-nrpgovi", src_path + "/", dst_path + "/"], stdout=PIPE)
-    assert proc.returncode == 0
-    dir_diff = {}
-    for line in proc.stdout.decode().split("\n")[1:-4]:
-        change = line[:11]
-        path = line[12:]
-        if path[-1] == "/":
-            path = path[:-1]
-        dir_diff[path] = change
-    return dir_diff
-
-
-def mkdir_copy(src_path, dst_path, sub_path):
-    path = ""
-    for dir in osp.dirname(sub_path).split("/"):
-        path += "/" + dir
-        if not osp.exists(dst_path + path):
-            os.mkdir(dst_path + path)
-            shutil.copystat(src_path + path, dst_path + path)
-    shutil.copy2(osp.join(src_path, sub_path), osp.join(dst_path, sub_path))
 
 
 class CfgElement(object):
@@ -206,7 +153,7 @@ class CfgRepo(Repo):
         for e in self.elts:
             if e.difference == FILE_IDENTICAL:
                 continue
-            print("%s : %s" % (e.dst_path, colored(MESSAGE[e.difference], "green")))
+            print("%s :" % e.dst_path)
             if e.difference != FILE_MISSING:
                 colordiff(e.dst_path, e.abspath)
             if test:
@@ -245,8 +192,7 @@ class CfgRepo(Repo):
         if not path.startswith(params.target):
             error("path outside %s dir" % params.target)
         if not osp.exists(path):
-            print(colored("ERROR", "red"), " : path does not exists")
-            return
+            error("path does not exists")
         if params.target == "/":
             sub_path = path[len(params.target) :]
         else:
@@ -259,14 +205,14 @@ class CfgRepo(Repo):
         print("%s added to the repository" % basename)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(help="commands", dest="command")
 
     # Install command
-    install_parser = subparsers.add_parser("install", help="Install src content")
-    install_parser = subparsers.add_parser(
+    subparsers.add_parser("install", help="Install src content")
+    subparsers.add_parser(
         "check", help="Perform a trial install to show what's changed"
     )
 
@@ -284,3 +230,7 @@ if __name__ == "__main__":
         repo.install_command(test=True)
     elif args.command == "add":
         repo.add_command(args.path)
+
+
+if __name__ == "__main__":
+    main()

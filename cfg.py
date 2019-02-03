@@ -65,13 +65,13 @@ L_SRC_PATH = len(SRC_PATH)
 sys.path.append(".")
 params = importlib.import_module("cfg_params")
 params_mtime = osp.getmtime(params.__file__)
-replacement_map = {
+params_map = {
     "=cfg[%s]" % key: getattr(params, key) for key in dir(params) if key == key.upper()
 }
-for key, value in replacement_map.items():
+for key, value in params_map.items():
     if not isinstance(value, str):
         config_error("%s value should be a string" % key)
-cfg_rgxp = re.compile("|".join(map(re.escape, replacement_map.keys())))
+cfg_rgxp = re.compile("|".join(map(re.escape, params_map.keys())))
 
 
 def dir_diff(src_path, dst_path):
@@ -140,9 +140,7 @@ class CfgElement(object):
             or osp.getmtime(self.abspath) > osp.getmtime(new_abspath)
         ):
             content = open(self.abspath).read()
-            content = cfg_rgxp.sub(
-                lambda match: replacement_map[match.group(0)], content
-            )
+            content = cfg_rgxp.sub(lambda match: params_map[match.group(0)], content)
             file = open(new_abspath, "w")
             file.write(content)
         shutil.copystat(self.abspath, new_abspath)

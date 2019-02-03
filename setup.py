@@ -21,9 +21,9 @@ setup(
     # For a list of valid classifiers, see https://pypi.org/classifiers/
     classifiers=[  # Optional
         "Development Status :: 4 - Beta",
-        "Intended Audience :: DevOps",
-        "Topic :: System Administration :: Build Tools",
-        "License :: OSI Approved :: GPL",
+        "Intended Audience :: System Administrators",
+        "Topic :: Software Development :: Build Tools",
+        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",

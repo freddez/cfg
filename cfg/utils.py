@@ -7,10 +7,6 @@ from termcolor import colored
 from subprocess import run, PIPE
 
 
-def human_stat(path):
-    return stat.filemode(os.stat(path).st_mode)
-
-
 def error(error_type, message=None):
     if message is None:
         message = error_type
@@ -35,20 +31,6 @@ def git_hashes(str_paths):
 
 def colordiff(file1, file2):
     run(["colordiff", file1, file2])
-
-
-def dir_diff(src_path, dst_path):
-    "Check differences between two paths. Used to check permissions changes"
-    proc = run(["rsync", "-nrpgovi", src_path + "/", dst_path + "/"], stdout=PIPE)
-    assert proc.returncode == 0
-    dir_diff = {}
-    for line in proc.stdout.decode().split("\n")[1:-4]:
-        change = line[:11]
-        path = line[12:]
-        if path[-1] == "/":
-            path = path[:-1]
-        dir_diff[path] = change
-    return dir_diff
 
 
 def mkdir_copy(src_path, dst_path, sub_path):

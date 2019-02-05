@@ -10,7 +10,6 @@ Installation
 In addition of python3 and related modules, cfg depends of these binaries:
 
 - git
-- rsync
 - colordiff
 
 Latest release could be installed via::
@@ -42,8 +41,7 @@ Once *TARGET* parameter is configured, you can add existing config file with::
   cfg add /etc/postfix/main.cf
 
 The previous command will create ``src/etc/postfix/main.cf`` file and commit it to the
-repository, preserving existing file rights and attributes. Don't forget to ``git push``
-your work.
+repository. Don't forget to ``git push`` your work.
 
 To see if your ``src`` and target directory differs, do a::
 
@@ -55,8 +53,6 @@ It will compare the two directories and eventually output differences::
   /etc/aliases :
   2a3
   > root:        f@idez.net
-  checking attributes changes...
-  etc/aliases
 
 And then::
 
@@ -129,12 +125,10 @@ Notes:
 Internals
 ---------
 
-For safety and fast processing, we use two system call for file content and attribute
-comparison:
-
-- src and target directories files contents are compared using git hashes:
+For safety and fast processing, src and target directories files contents are compared
+using git hashes:
   - pre-computed src git sha1 hashes for src
   - ``git hash-object --stdin-paths`` for src, in one system call.
-- src and target directories file and folder attributes are compared with ``rsync``
+
 
 

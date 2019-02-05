@@ -6,17 +6,8 @@ import os, os.path as osp
 import re
 import shutil
 import colorama
-from termcolor import colored
 from git import Repo
-from .utils import (
-    human_stat,
-    error,
-    config_error,
-    git_hashes,
-    colordiff,
-    dir_diff,
-    mkdir_copy,
-)
+from .utils import error, config_error, git_hashes, colordiff, mkdir_copy
 
 
 FILE_IDENTICAL = 0
@@ -164,28 +155,6 @@ class CfgRepo(Repo):
                 os.makedirs(e.dst_path)
             else:
                 shutil.copy2(e.abspath, e.dst_path)
-        print("checking attributes changes...")
-        dird = dir_diff(SRC_PATH, params.target)
-        for e in self.elts:
-            if test and e.difference == FILE_MISSING:
-                continue
-            change = dird.get(e.path)
-            if change:
-                dst_perms = human_stat(e.dst_path)
-                src_perms = human_stat(e.abspath)
-                if src_perms != dst_perms:
-                    print(
-                        "%s %s %s"
-                        % (
-                            colored(src_perms, "green"),
-                            colored(dst_perms, "red"),
-                            e.path,
-                        )
-                    )
-                else:
-                    print(e.path)
-                if not test:
-                    shutil.copystat(e.abspath, e.dst_path)
 
     def add_command(self, path):
         path = osp.abspath(path)

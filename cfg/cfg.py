@@ -115,6 +115,8 @@ class CfgRepo(Repo):
 
     def prepare_install_tree_stage_1(self, tree):
         for e in tree:
+            if not e.path.startswith(SRC_PATH):
+                continue
             basename = osp.basename(e.path)
             if basename.startswith("cfg-"):
                 cfg_host_prefix = "cfg-%s." % self.hostname

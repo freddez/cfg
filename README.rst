@@ -14,7 +14,7 @@ In addition of python3 and related modules, cfg depends of these binaries:
 
 Latest release could be installed via::
 
-  pip3 install cfg
+  pip3 install cfg-manager
   
 Or frome these sources::
 
@@ -150,6 +150,3 @@ For safety and fast processing, src and target directories files contents are co
 using git hashes:
   - pre-computed src git sha1 hashes for src
   - ``git hash-object --stdin-paths`` for src, in one system call.
-
-
-

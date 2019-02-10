@@ -8,18 +8,15 @@ with open(path.join(here, "README.rst"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="cfg",
-    version="1.1.3",
+    name="cfg-manager",
+    version="1.1.4",
     description="git based config files manager and installer",
     long_description=long_description,
     long_description_content_type="text/x-rst",
-    url="https://github.com/freddez/cfg",  # Optional
+    url="https://github.com/freddez/cfg",
     author="Frédéric de ZORZI",
     author_email="f@idez.net",
-    # Classifiers help users find your project by categorizing it.
-    #
-    # For a list of valid classifiers, see https://pypi.org/classifiers/
-    classifiers=[  # Optional
+    classifiers=[ 
         "Development Status :: 4 - Beta",
         "Intended Audience :: System Administrators",
         "Topic :: Software Development :: Build Tools",

@@ -1,4 +1,3 @@
-import stat
 import os
 import os.path as osp
 import sys
@@ -19,6 +18,10 @@ def config_error(message):
     error("CONFIG ERROR", message)
 
 
+def info(message):
+    print("%s" % (colored(message, "green")))
+
+
 def git_hashes(str_paths):
     proc = run(
         ["git", "hash-object", "--stdin-paths"],
@@ -31,6 +34,15 @@ def git_hashes(str_paths):
 
 def colordiff(file1, file2):
     run(["colordiff", file1, file2])
+
+
+def copy_preserve(src_path, dst_path, new):
+    if not new:
+        dst_path_old = dst_path + ".old"
+        shutil.move(dst_path, dst_path_old)
+    shutil.copy2(src_path, dst_path)
+    if not new:
+        os.chmod(dst_path, os.stat(dst_path_old).st_mode)
 
 
 def mkdir_copy(src_path, dst_path, sub_path):

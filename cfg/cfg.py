@@ -4,10 +4,9 @@ import importlib
 import sys
 import os, os.path as osp
 import re
-import shutil
 import colorama
 from git import Repo
-from .utils import error, config_error, git_hashes, colordiff, mkdir_copy
+from .utils import info, error, config_error, git_hashes, colordiff, copy_preserve, mkdir_copy
 
 
 FILE_IDENTICAL = 0
@@ -86,7 +85,6 @@ class CfgElement(object):
             content = cfg_rgxp.sub(lambda match: params_map[match.group(0)], content)
             file = open(new_abspath, "w")
             file.write(content)
-        shutil.copystat(self.abspath, new_abspath)
         self.path = new_path
         self.abspath = new_abspath
         self.hexsha = None
@@ -147,14 +145,14 @@ class CfgRepo(Repo):
             print("%s :" % e.dst_path)
             if e.difference != FILE_MISSING:
                 colordiff(e.dst_path, e.abspath)
+            else:
+                info("new file")
             if test:
                 continue
-            if e.difference != FILE_MISSING and e.type != "tree":
-                shutil.move(e.dst_path, e.dst_path + ".old")
             if e.type == "tree":
                 os.makedirs(e.dst_path)
             else:
-                shutil.copy2(e.abspath, e.dst_path)
+                copy_preserve(e.abspath, e.dst_path, new=e.difference == FILE_MISSING)
 
     def add_command(self, path):
         path = osp.abspath(path)

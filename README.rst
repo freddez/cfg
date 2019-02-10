@@ -122,6 +122,18 @@ Notes:
   configurations.
 - **Only uppercase parameters names are exported**.
 
+
+Permissions
+-----------
+
+Because git repositories only handle executable flag permissions,target files
+permissions are preserved. It is the more simple and safe approach because most of the
+times, target files already exists.
+
+In a future release, I could had *in repository* permission management, but I have no
+simple approach yet.
+
+
 Internals
 ---------
 

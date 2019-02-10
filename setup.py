@@ -9,7 +9,7 @@ with open(path.join(here, "README.rst"), encoding="utf-8") as f:
 
 setup(
     name="cfg",
-    version="1.1.0",
+    version="1.1.1",
     description="git based config files manager and installer",
     long_description=long_description,
     long_description_content_type="text/x-rst",

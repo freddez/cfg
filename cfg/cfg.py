@@ -2,11 +2,20 @@
 import argparse
 import importlib
 import sys
+import socket
 import os, os.path as osp
 import re
 import colorama
 from git import Repo
-from .utils import info, error, config_error, git_hashes, colordiff, copy_preserve, mkdir_copy
+from .utils import (
+    info,
+    error,
+    config_error,
+    git_hashes,
+    colordiff,
+    copy_preserve,
+    mkdir_copy,
+)
 
 
 FILE_IDENTICAL = 0
@@ -36,7 +45,7 @@ cfg_rgxp = re.compile("|".join(map(re.escape, params_map.keys())))
 
 
 class CfgElement(object):
-    def __init__(self, elt):
+    def __init__(self, elt, dst_path=None):
         self.type = elt.type
         self.size = elt.size
         self.hexsha = elt.hexsha
@@ -46,7 +55,7 @@ class CfgElement(object):
             basename = osp.basename(self.path)
             if basename.startswith("cfg."):
                 self.process_cfg_file(basename)
-        self.dst_path = osp.join(params.target, self.path)
+        self.dst_path = dst_path or osp.join(params.target, self.path)
 
     _difference = None
 
@@ -68,6 +77,10 @@ class CfgElement(object):
         self._difference = difference
 
     def process_cfg_file(self, basename):
+        """
+        cfg_file is a template containing =CFG[VAR] patterns, where VAR is a parameter 
+        defined in cfg_params.py (see prepare_install_tree_stage_1)
+        """
         n = len(basename)
         new_basename = basename[4:]  # suppress ".cfg" prefix
         new_path = self.path[:-n] + new_basename
@@ -95,10 +108,24 @@ class CfgRepo(Repo):
     def __init__(self, *args, **kwargs):
         super(CfgRepo, self).__init__(*args, **kwargs)
         params.target = osp.abspath(params.TARGET)
+        if hasattr(params, "HOSTNAME"):
+            self.hostname = params.HOSTNAME
+        else:
+            self.hostname = socket.gethostname()
 
     def prepare_install_tree_stage_1(self, tree):
         for e in tree:
-            if e.path.startswith(SRC_PATH):
+            basename = osp.basename(e.path)
+            if basename.startswith("cfg-"):
+                cfg_host_prefix = "cfg-%s." % self.hostname
+                if basename.startswith(cfg_host_prefix):
+                    dst_path = osp.join(
+                        params.target,
+                        e.path[L_SRC_PATH : -len(basename)]
+                        + basename[len(cfg_host_prefix) :],
+                    )
+                    self.elts.append(CfgElement(e, dst_path))
+            else:
                 self.elts.append(CfgElement(e))
             if e.type == "tree":
                 self.prepare_install_tree_stage_1(e)

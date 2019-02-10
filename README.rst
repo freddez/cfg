@@ -61,7 +61,7 @@ And then::
 Will install the modified files, producing the same output. Original dest files are
 backed up with ``.old`` extension.
 
-Advanced usage
+Template files
 --------------
 
 For multiple environments usage (duplicated servers, sub-configurations), a pattern
@@ -121,6 +121,15 @@ Notes:
 - As shown in previous example, you can use python code to face various environment
   configurations.
 - **Only uppercase parameters names are exported**.
+
+Per-host files
+--------------
+
+When configuration files are too different, you can provide host-dedicated versions of
+config files : simply prefix desired filenames with "cfg-[HOSTNAME]." where [HOSTNAME] is
+the target *hostname*. For example:
+
+   src/etc/cfg-bic.aliases
 
 
 Permissions
